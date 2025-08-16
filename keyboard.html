@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Διερευνητικό Πληκτρολόγιο (ΕΛ/EN)</title>
+<style>
+  :root{
+    --bg1:#fff4e6;        /* απαλό πορτοκαλί */
+    --bg2:#ffe8cc;        /* λίγο πιο έντονο πορτοκαλί */
+    --panel:#ffffff;
+    --key:#111827;        /* σκούρο για αντίθεση */
+    --key-hi:#1f2937;
+    --text:#111827;
+    --sub:#cbd5e1;
+    --accent:#0ea5e9;
+    --accent2:#f59e0b;
+    --border:#e5e7eb;
+    --caps-on:#fde68a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    display:flex; flex-direction:column; gap:12px; padding:12px;
+  }
+  h1{font-size:22px; margin:0 0 8px 0; font-weight:800; text-align:center}
+
+  /* Κεντράρισμα & πιο “μαζεμένο” layout για να μη χρειάζεται scroll */
+  .container{max-width:1100px; margin:0 auto; display:flex; flex-direction:column; gap:12px}
+
+  .wrap{display:grid; grid-template-columns:1fr; gap:10px}
+  @media(min-width:1000px){ .wrap{ grid-template-columns: 1fr 1fr } }
+
+  .screen{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:10px; display:flex; flex-direction:column; gap:8px;
+    min-height:190px; box-shadow:0 6px 16px rgba(0,0,0,.06);
+  }
+  .screen h2{font-size:18px; margin:0; font-weight:800}
+  .explain{
+    background:#f8fafc; border:1px dashed #e2e8f0; border-radius:12px; padding:10px; min-height:140px; line-height:1.6;
+    white-space:pre-wrap; font-size:18px;
+  }
+  .output{
+    background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; min-height:160px; line-height:1.7;
+    font-size:22px; overflow:auto; white-space:pre-wrap;
+  }
+
+  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+  .status{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center }
+  .pill{
+    border:1px solid var(--border); padding:6px 10px; border-radius:999px; background:#ffffff; font-size:14px; font-weight:600;
+  }
+  .pill.on{ border-color:var(--accent); color:var(--accent) }
+  .btn{
+    background:var(--key); border:1px solid #0b1220; color:#fff;
+    border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:800; user-select:none;
+    box-shadow:0 3px 10px rgba(0,0,0,.15); font-size:15px;
+  }
+  .btn:hover{ background:var(--key-hi) }
+  .hint{ font-size:13px; opacity:.85; text-align:center; width:100% }
+
+  /* Caps banner */
+  .caps-banner{
+    display:none; background:var(--caps-on); border:1px solid #fcd34d; color:#7c2d12;
+    border-radius:10px; padding:8px 12px; font-weight:800; text-align:center
+  }
+  .caps-banner.show{ display:block }
+
+  /* Keyboard (πιο μικρό & κεντραρισμένο) */
+  .kbd{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:10px;
+    display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,.06);
+    max-width:980px; margin:0 auto;
+  }
+  .row{ display:flex; gap:8px; justify-content:center }
+  .key{
+    background:var(--key); border:1px solid #0b1220; border-radius:12px; min-width:48px; height:52px;
+    display:flex; align-items:center; justify-content:center; gap:6px; padding:4px 6px; cursor:pointer; user-select:none;
+    position:relative; color:#fff; transition:transform .03s ease;
+  }
+  .key .label{font-size:19px; font-weight:900; letter-spacing:.2px}
+  .key .sub{font-size:12px; color:var(--sub); position:absolute; top:6px; right:8px}
+  .key:active, .key.active{ background:var(--key-hi); transform:translateY(1px) }
+  .key.caps-on{ outline:3px solid var(--accent2); }
+  .wide{ min-width:86px } .wider{ min-width:110px }
+  .space{ flex:0 0 30%; }   /* λίγο μικρότερο Space */
+  .note{ font-size:13px; opacity:.9; margin-top:-4px }
+
+  .toolbar-top{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center}
+</style>
+</head>
+<body>
+  <h1>Διερευνητικό Πληκτρολόγιο — Ελληνικά / English</h1>
+
+  <div class="container">
+    <div class="toolbar toolbar-top">
+      <div class="status">
+        <span class="pill" id="langPill">Γλώσσα: Ελληνικά</span>
+        <span class="pill" id="capsPill">CapsLock: OFF</span>
+        <span class="pill" id="shiftPill">Shift: OFF</span>
+        <span class="pill" id="tonosPill">Τόνος: OFF</span>
+        <span class="pill" id="dialPill">Διαλυτικά: OFF</span>
+      </div>
+      <div class="controls">
+        <button class="btn" id="toggleLangBtn" title="Εναλλαγή γλώσσας (Shift+Alt)">Γλώσσα</button>
+        <button class="btn" id="clearBtn" title="Καθαρισμός κειμένου">Καθαρισμός</button>
+      </div>
+      <span class="hint">Tips: <b>Shift+Alt</b> αλλάζει γλώσσα 
+    </div>
+
+    <div id="capsBanner" class="caps-banner">Τα ΚΕΦΑΛΑΙΑ είναι ενεργά (CapsLock ON)</div>
+
+    <div class="wrap">
+      <!-- Αριστερά: Τι γράφεται -->
+      <section class="screen" id="screenOutput">
+        <h2>1) Τι γράφεται</h2>
+        <div id="output" class="output" contenteditable="false" aria-label="Πεδίο κειμένου"></div>
+      </section>
+
+      <!-- Δεξιά: Τι κάνει το πλήκτρο -->
+      <section class="screen" id="screenExplain">
+        <h2>2) Τι κάνει το πλήκτρο</h2>
+        <div class="explain" id="explainBox">Πάτησε ένα πλήκτρο για να δεις εδώ την εξήγηση.</div>
+        
+        </div>
+      </section>
+    </div>
+
+    <section class="kbd" aria-label="Εικονικό πληκτρολόγιο">
+      <div class="row" id="row0"></div>
+      <div class="row" id="row1"></div>
+      <div class="row" id="row2"></div>
+      <div class="row" id="row3"></div>
+      <div class="row" id="row4"></div>
+    </section>
+  </div>
+
+<script>
+/* ============ ΚΑΤΑΣΤΑΣΕΙΣ ============ */
+const state = { lang:'el', caps:false, shift:false, tonos:false, dial:false };
+let langSwitchedHold = false; // αποφυγή διπλού toggle όσο Shift+Alt κρατιούνται
+let nextGuillemet = 'open';   // για « … » με Shift+Quote
+
+const output = document.getElementById('output');
+const explainBox = document.getElementById('explainBox');
+const langPill = document.getElementById('langPill');
+const capsPill = document.getElementById('capsPill');
+const shiftPill = document.getElementById('shiftPill');
+const tonosPill = document.getElementById('tonosPill');
+const dialPill = document.getElementById('dialPill');
+const capsBanner = document.getElementById('capsBanner');
+
+function setPills(){
+  langPill.textContent = 'Γλώσσα: ' + (state.lang==='el' ? 'Ελληνικά' : 'English');
+  capsPill.textContent = 'CapsLock: ' + (state.caps ? 'ON' : 'OFF');
+  capsPill.classList.toggle('on', state.caps);
+  shiftPill.textContent = 'Shift: ' + (state.shift ? 'ON' : 'OFF');
+  shiftPill.classList.toggle('on', state.shift);
+  tonosPill.textContent = 'Τόνος: ' + (state.tonos ? 'ON' : 'OFF');
+  tonosPill.classList.toggle('on', state.tonos);
+  dialPill.textContent = 'Διαλυτικά: ' + (state.dial ? 'ON' : 'OFF');
+  dialPill.classList.toggle('on', state.dial);
+  capsBanner.classList.toggle('show', state.caps);
+  const capsKey = document.querySelector('.key[data-code="CapsLock"]');
+  if(capsKey) capsKey.classList.toggle('caps-on', state.caps);
+}
+function writeExplain(msg){ explainBox.textContent = msg; }
+setPills();
+
+/* ============ ΔΙΑΚΡΙΤΙΚΑ ============ */
+const accentMap = {
+  'α':'ά','ε':'έ','η':'ή','ι':'ί','ο':'ό','υ':'ύ','ω':'ώ',
+  'Α':'Ά','Ε':'Έ','Η':'Ή','Ι':'Ί','Ο':'Ό','Υ':'Ύ','Ω':'Ώ'
+};
+const diaerMap = { 'ι':'ϊ','υ':'ϋ','Ι':'Ϊ','Υ':'Ϋ' };
+const combinedMap = { 'ι':'ΐ','υ':'ΰ','Ι':'Ϊ','Υ':'Ϋ' }; // κεφαλαία δεν παίρνουν και τα δύο, δίνουμε με διαλυτικά
+
+function applyDiacritics(ch){
+  if(state.lang!=='el') return ch;
+  if(!(state.tonos || state.dial)) return ch;
+
+  let out = ch, usedTonos=false, usedDial=false;
+
+  if(state.tonos && state.dial){
+    if(combinedMap[ch]){ out = combinedMap[ch]; usedTonos=true; usedDial=true; }
+    else if(accentMap[ch]){ out = accentMap[ch]; usedTonos=true; } // αν δεν είναι ι/υ, βάλε μόνο τόνο
+    else if(diaerMap[ch]){ out = diaerMap[ch]; usedDial=true; }
+  } else if(state.tonos){
+    out = accentMap[ch] || ch; usedTonos = accentMap[ch] ? true : false;
+  } else if(state.dial){
+    out = diaerMap[ch] || ch; usedDial = diaerMap[ch] ? true : false;
+  }
+
+  if(usedTonos) state.tonos = false;
+  if(usedDial) state.dial = false;
+  setPills();
+  return out;
+}
+
+/* ============ ΔΙΑΤΑΞΗ ΠΛΗΚΤΡΩΝ ============ */
+/* Row2: ... K, L, TONOS(;), QUOTE('"), ENTER */
+const rows = {
+  row0: [
+    {type:'char', code:'Backquote', el:'`', en:'`', shiftedEl:'~', shiftedEn:'~', explain:'Grave/Tilde.'},
+    {type:'char', code:'Digit1', el:'1', en:'1', shiftedEl:'!', shiftedEn:'!', explain:'1 (Shift: !).'},
+    {type:'char', code:'Digit2', el:'2', en:'2', shiftedEl:'@', shiftedEn:'@', explain:'2.'},
+    {type:'char', code:'Digit3', el:'3', en:'3', shiftedEl:'#', shiftedEn:'#', explain:'3.'},
+    {type:'char', code:'Digit4', el:'4', en:'4', shiftedEl:'$', shiftedEn:'$', explain:'4.'},
+    {type:'char', code:'Digit5', el:'5', en:'5', shiftedEl:'%', shiftedEn:'%', explain:'5.'},
+    {type:'char', code:'Digit6', el:'6', en:'6', shiftedEl:'^', shiftedEn:'^', explain:'6.'},
+    {type:'char', code:'Digit7', el:'7', en:'7', shiftedEl:'&', shiftedEn:'&', explain:'7.'},
+    {type:'char', code:'Digit8', el:'8', en:'8', shiftedEl:'*', shiftedEn:'*', explain:'8.'},
+    {type:'char', code:'Digit9', el:'9', en:'9', shiftedEl:'(', shiftedEn:'(', explain:'9.'},
+    {type:'char', code:'Digit0', el:'0', en:'0', shiftedEl:')', shiftedEn:')', explain:'0.'},
+    {type:'char', code:'Minus',  el:'-', en:'-', shiftedEl:'_', shiftedEn:'_', explain:'- (Shift: _).'},
+    {type:'char', code:'Equal',  el:'=', en:'=', shiftedEl:'+', shiftedEn:'+', explain:'= (Shift: +).'},
+    {type:'backspace', code:'Backspace', label:'Backspace', explain:'Σβήνει.', wide:true},
+  ],
+  row1: [
+    {type:'tab', code:'Tab', label:'Tab', explain:'Εσοχή.', wide:true},
+    {type:'char', code:'KeyQ', el:';', en:'q', shiftedEl:':', shiftedEn:'Q', explain:'ΕΛ: ; / :  · EN: q / Q'},
+    {type:'char', code:'KeyW', el:'ς', en:'w', shiftedEl:'ς', shiftedEn:'W', explain:'Σ τελικό / W.'},
+    {type:'char', code:'KeyE', el:'ε', en:'e', shiftedEl:'Ε', shiftedEn:'E', explain:'Ε / E.'},
+    {type:'char', code:'KeyR', el:'ρ', en:'r', shiftedEl:'Ρ', shiftedEn:'R', explain:'Ρ / R.'},
+    {type:'char', code:'KeyT', el:'τ', en:'t', shiftedEl:'Τ', shiftedEn:'T', explain:'Τ / T.'},
+    {type:'char', code:'KeyY', el:'υ', en:'y', shiftedEl:'Υ', shiftedEn:'Y', explain:'Υ / Y.'},
+    {type:'char', code:'KeyU', el:'θ', en:'u', shiftedEl:'Θ', shiftedEn:'U', explain:'Θ / U.'},
+    {type:'char', code:'KeyI', el:'ι', en:'i', shiftedEl:'Ι', shiftedEn:'I', explain:'Ι / I.'},
+    {type:'char', code:'KeyO', el:'ο', en:'o', shiftedEl:'Ο', shiftedEn:'O', explain:'Ο / O.'},
+    {type:'char', code:'KeyP', el:'π', en:'p', shiftedEl:'Π', shiftedEn:'P', explain:'Π / P.'},
+    {type:'char', code:'BracketLeft',  el:'[', en:'[', shiftedEl:'{', shiftedEn:'{', explain:'Αγκύλες.'},
+    {type:'char', code:'BracketRight', el:']', en:']', shiftedEl:'}', shiftedEn:'}', explain:'Αγκύλες.'},
+  ],
+  row2: [
+    {type:'caps', code:'CapsLock', label:'CapsLock', explain:'Κλειδώνει κεφαλαία.', wider:true},
+    {type:'char', code:'KeyA', el:'α', en:'a', shiftedEl:'Α', shiftedEn:'A', explain:'Α / A.'},
+    {type:'char', code:'KeyS', el:'σ', en:'s', shiftedEl:'Σ', shiftedEn:'S', explain:'Σ / S.'},
+    {type:'char', code:'KeyD', el:'δ', en:'d', shiftedEl:'Δ', shiftedEn:'D', explain:'Δ / D.'},
+    {type:'char', code:'KeyF', el:'φ', en:'f', shiftedEl:'Φ', shiftedEn:'F', explain:'Φ / F.'},
+    {type:'char', code:'KeyG', el:'γ', en:'g', shiftedEl:'Γ', shiftedEn:'G', explain:'Γ / G.'},
+    {type:'char', code:'KeyH', el:'η', en:'h', shiftedEl:'Η', shiftedEn:'H', explain:'Η / H.'},
+    {type:'char', code:'KeyJ', el:'ξ', en:'j', shiftedEl:'Ξ', shiftedEn:'J', explain:'Ξ / J.'},
+    {type:'char', code:'KeyK', el:'κ', en:'k', shiftedEl:'Κ', shiftedEn:'K', explain:'Κ / K.'},
+    {type:'char', code:'KeyL', el:'λ', en:'l', shiftedEl:'Λ', shiftedEn:'L', explain:'Λ / L.'},
+    /* Τέλος σειράς: Τόνος ;  →  Πλήκτρο εισαγωγικών  →  Enter */
+    {type:'dead',       code:'Semicolon', label:'΄ ;', explain:'Τόνος (;) — με Shift: Διαλυτικά (¨)'},
+    {type:'quote-toggle', code:'Quote',  label:"' \"", explain:'Χωρίς Shift: \'  /  Με Shift: « ή » (εναλλάξ)'},
+    {type:'enter',   code:'Enter',     label:'Enter', explain:'Νέα γραμμή.', wider:true},
+  ],
+  row3: [
+    {type:'shift', code:'ShiftLeft', label:'Shift', explain:'Προσωρινά κεφαλαία/σύμβολα.', wider:true},
+    {type:'char', code:'KeyZ', el:'ζ', en:'z', shiftedEl:'Ζ', shiftedEn:'Z', explain:'Ζ / Z.'},
+    {type:'char', code:'KeyX', el:'χ', en:'x', shiftedEl:'Χ', shiftedEn:'X', explain:'Χ / X.'},
+    {type:'char', code:'KeyC', el:'ψ', en:'c', shiftedEl:'Ψ', shiftedEn:'C', explain:'Ψ / C.'},
+    {type:'char', code:'KeyV', el:'ω', en:'v', shiftedEl:'Ω', shiftedEn:'V', explain:'Ω / V.'},
+    {type:'char', code:'KeyB', el:'β', en:'b', shiftedEl:'Β', shiftedEn:'B', explain:'Β / B.'},
+    {type:'char', code:'KeyN', el:'ν', en:'n', shiftedEl:'Ν', shiftedEn:'N', explain:'Ν / N.'},
+    {type:'char', code:'KeyM', el:'μ', en:'m', shiftedEl:'Μ', shiftedEn:'M', explain:'Μ / M.'},
+    {type:'char', code:'Comma',  el:',', en:',', shiftedEl:';', shiftedEn:'<', explain:'Κόμμα (Shift: ελλην. ;)'},
+    {type:'char', code:'Period', el:'.', en:'.', shiftedEl:':', shiftedEn:'>', explain:'Τελεία (Shift: :).'},
+    {type:'char', code:'Slash',  el:'-', en:'/', shiftedEl:'_', shiftedEn:'?', explain:'Παύλα ή / (Shift: _ ή ?).'},
+    {type:'shift', code:'ShiftRight', label:'Shift', explain:'Προσωρινά κεφαλαία/σύμβολα.', wider:true},
+  ],
+  row4: [
+    {type:'ctrl',  code:'ControlLeft', label:'Ctrl', explain:'Χειριστικό.'},
+    {type:'alt',   code:'AltLeft', label:'Alt', explain:'Με Shift → αλλαγή γλώσσας.'},
+    {type:'meta',  code:'MetaLeft', label:'Win', explain:'Πλήκτρο Windows (ενδεικτικό).'},
+    {type:'space', code:'Space', label:'Space', explain:'Κενό.', space:true},
+    {type:'lang',  code:'Lang', label:'ΕΛ/EN', explain:'Αλλαγή γλώσσας.'}
+  ],
+};
+
+/* ============ ΔΗΜΙΟΥΡΓΙΑ ΠΛΗΚΤΡΩΝ ============ */
+function makeKey(def){
+  const el = document.createElement('div');
+  el.className = 'key';
+  if(def.wide) el.classList.add('wide');
+  if(def.wider) el.classList.add('wider');
+  if(def.space) el.classList.add('space');
+  el.dataset.type = def.type;
+  el.dataset.code = def.code;
+  el.tabIndex = 0;
+
+  const label = document.createElement('span');
+  label.className = 'label';
+  label.textContent = def.label || '';
+  el.appendChild(label);
+
+  const sub = document.createElement('span');
+  sub.className = 'sub';
+  el.appendChild(sub);
+
+  refreshKeyFace(el, def);
+
+  el.addEventListener('mousedown', (e)=>{ e.preventDefault(); pressKey(def, el); });
+  el.addEventListener('mouseup',   ()=>{ releaseKey(def, el); });
+  el.addEventListener('mouseleave',()=>{ releaseKey(def, el); });
+
+  return el;
+}
+
+function getCharFaces(def){
+  const shifted = state.shift ^ state.caps;
+  if(def.type==='char'){
+    if(state.lang==='el'){
+      const main = shifted ? (def.shiftedEl || (def.el ? def.el.toUpperCase() : '')) : def.el;
+      const sub  = shifted ? (def.el || '') : (def.shiftedEl || '');
+      return [main, sub];
+    }else{
+      const main = shifted ? (def.shiftedEn || (def.en ? def.en.toUpperCase() : '')) : def.en;
+      const sub  = shifted ? (def.en || '') : (def.shiftedEn || '');
+      return [main, sub];
+    }
+  }
+  if(def.type==='quote-toggle'){
+    return [ state.shift ? (nextGuillemet==='open'?'«':'»') : `' "`, state.shift ? '' : '« »' ];
+  }
+  return [def.label || def.code, ''];
+}
+
+function refreshKeyFace(el, def){
+  const label = el.querySelector('.label');
+  const sub = el.querySelector('.sub');
+
+  if(def.type==='char' || def.type==='quote-toggle'){
+    const [m,s] = getCharFaces(def);
+    label.textContent = m;
+    sub.textContent = s || '';
+  } else if(def.type==='dead' && def.code==='Semicolon'){
+    label.textContent = '΄ ;';  // τόνος + ελληνικό ;
+    sub.textContent = 'Shift: ¨'; // διαλυτικά
+  } else {
+    label.textContent = def.label || def.code; sub.textContent = '';
+  }
+}
+
+for(const rowId in rows){
+  const rowDiv = document.getElementById(rowId);
+  rows[rowId].forEach(def=> rowDiv.appendChild(makeKey(def)));
+}
+
+/* ============ ΕΙΣΑΓΩΓΗ ΚΕΙΜΕΝΟΥ ============ */
+function insertText(t){
+  // Εφαρμογή διακριτικών (τόνος/διαλυτικά) αν έχουν ενεργοποιηθεί
+  t = applyDiacritics(t);
+  output.textContent += t;
+}
+
+function computeChar(def){
+  const isLetter = /Key[A-Z]/.test(def.code);
+  let ch;
+  if(state.lang==='el') ch = def.el ?? def.en ?? '';
+  else ch = def.en ?? def.el ?? '';
+
+  const shifted = state.shift;
+  if(!isLetter && shifted){
+    ch = (state.lang==='el' ? (def.shiftedEl ?? def.shiftedEn) : (def.shiftedEn ?? def.shiftedEl)) || ch;
+  }
+  if(isLetter){
+    const upper = state.caps ^ state.shift;
+    if(upper){
+      ch = state.lang==='el'
+        ? (def.shiftedEl || (def.el?def.el.toUpperCase():ch.toUpperCase()))
+        : (def.shiftedEn || (def.en?def.en.toUpperCase():ch.toUpperCase()));
+    }
+  }
+  return ch;
+}
+
+/* ============ ΣΥΜΠΕΡΙΦΟΡΕΣ ΠΛΗΚΤΡΩΝ ============ */
+function pressKey(def, elem){
+  elem && elem.classList.add('active');
+  describe(def);
+
+  switch(def.type){
+    case 'char': insertText(computeChar(def)); break;
+    case 'dead': // ; → τόνος, Shift+; → διαλυτικά
+      if(state.shift){ state.dial = true; state.tonos = false; } // προτεραιότητα στα διαλυτικά
+      else { state.tonos = true; }
+      setPills();
+      break;
+    case 'quote-toggle':
+      if(state.shift){
+        insertText(nextGuillemet==='open' ? '«' : '»');
+        nextGuillemet = (nextGuillemet==='open') ? 'close' : 'open';
+      }else{
+        insertText("'"); // χωρίς Shift → '
+      }
+      break;
+    case 'backspace': output.textContent = output.textContent.slice(0,-1); break;
+    case 'enter': insertText('\n'); break;
+    case 'tab': insertText('\t'); break;
+    case 'space': insertText(' '); break;
+    case 'caps':
+      state.caps = !state.caps; setPills(); refreshAllFaces();
+      break;
+    case 'shift': state.shift = true; setPills(); refreshAllFaces(); break;
+    case 'alt': /* no-op */ break;
+    case 'lang': toggleLanguage(); break;
+  }
+}
+function releaseKey(def, elem){
+  elem && elem.classList.remove('active');
+  if(def?.type==='shift'){ state.shift=false; setPills(); refreshAllFaces(); }
+}
+
+function refreshAllFaces(){
+  document.querySelectorAll('.key').forEach(k=>{
+    const def = getDefByCode(k.dataset.code);
+    if(def) refreshKeyFace(k, def);
+  });
+}
+function getDefByCode(code){
+  for(const rowId in rows){
+    const d = rows[rowId].find(x=>x.code===code);
+    if(d) return d;
+  }
+  return null;
+}
+
+function describe(def){
+  let msg='';
+  switch(def.type){
+    case 'char': {
+      const [main, alt]=getCharFaces(def);
+      msg = `Πάτησες: "${main}"`+(alt?` (δεύτερη όψη: ${alt})`:'')+"\nΛειτουργία: γράφει χαρακτήρα.";
+      break;
+    }
+    case 'dead':
+      msg='Πάτησες: Πλήκτρο τόνου (;)\n- Χωρίς Shift: ενεργοποιεί Τόνο (´)\n- Με Shift: ενεργοποιεί Διαλυτικά (¨)\nΕφαρμόζονται στο επόμενο φωνήεν.';
+      break;
+    case 'quote-toggle':
+      msg='Πάτησες: Πλήκτρο δεξιά του τόνου\n- Χωρίς Shift: \' (απόστροφος)\n- Με Shift: « ή » (εναλλάξ κάθε πάτημα)';
+      break;
+    case 'backspace': msg='Backspace: σβήνει τον προηγούμενο χαρακτήρα.'; break;
+    case 'enter': msg='Enter: πάει στην επόμενη γραμμή.'; break;
+    case 'tab': msg='Tab: πηγαίνει προς τα δεξιά.'; break;
+    case 'space': msg='Space: κενό.'; break;
+    case 'caps': msg='CapsLock: εναλλάσσει μόνιμα κεφαλαία/πεζά (στο εργαλείο).'; break;
+    case 'shift': msg='Shift: προσωρινά κεφαλαία ή σύμβολα.'; break;
+    case 'lang': msg='Αλλαγή γλώσσας πληκτρολογίου (εσωτερικά στην εφαρμογή).'; break;
+    default: msg=def.label||def.code;
+  }
+  writeExplain(msg);
+}
+
+function toggleLanguage(){
+  state.lang = state.lang==='el' ? 'en' : 'el';
+  state.tonos = false; state.dial = false;
+  setPills(); refreshAllFaces();
+  writeExplain(`Αλλαγή γλώσσας → ${state.lang==='el'?'Ελληνικά':'English'}.`);
+}
+
+/* ============ ΠΡΑΓΜΑΤΙΚΟ ΠΛΗΚΤΡΟΛΟΓΙΟ ============ */
+document.addEventListener('keydown',(e)=>{
+  const def = getDefByCode(e.code);
+  if(def) e.preventDefault();
+
+  if(e.key==='Shift'){ state.shift=true; setPills(); refreshAllFaces(); }
+  if(e.code==='CapsLock'){ state.caps=!state.caps; setPills(); refreshAllFaces(); }
+
+  // Shift+Alt → αλλαγή γλώσσας (αποφυγή διπλού toggle)
+  if(e.shiftKey && (e.altKey || e.code==='AltLeft' || e.code==='AltRight')){
+    if(!langSwitchedHold){ toggleLanguage(); langSwitchedHold=true; }
+    return;
+  }
+
+  // Πραγματική συμπεριφορά στο Quote: με Shift → « » toggle, χωρίς Shift → ' ; με Shift+' (US) → "
+  if(e.code==='Quote'){
+    if(e.shiftKey){
+      insertText(nextGuillemet==='open' ? '«' : '»');
+      nextGuillemet = (nextGuillemet==='open') ? 'close' : 'open';
+    } else {
+      insertText("'");
+    }
+    writeExplain('Πλήκτρο δεξιά του ; — χωρίς Shift: \', με Shift: « ή » (εναλλάξ).');
+    return;
+  }
+
+  // Πλήκτρο τόνου/διαλυτικών (Semicolon)
+  if(e.code==='Semicolon'){
+    if(e.shiftKey){ state.dial = true; state.tonos = false; writeExplain('Διαλυτικά (¨): θα εφαρμοστούν στο επόμενο ι/υ.'); }
+    else { state.tonos = true; writeExplain('Τόνος (´): θα εφαρμοστεί στο επόμενο φωνήεν.'); }
+    setPills();
+    return;
+  }
+
+  if(!def){
+    if(e.key==='Enter'){ insertText('\n'); writeExplain('Enter: νέα γραμμή.'); }
+    if(e.key==='Backspace'){ output.textContent=output.textContent.slice(0,-1); writeExplain('Backspace: σβήνει.'); }
+    if(e.key===' '){ insertText(' '); writeExplain('Space: κενό.'); }
+    return;
+  }
+  const el = document.querySelector(`.key[data-code="${def.code}"]`);
+  if(el) el.classList.add('active');
+  pressKey(def, el);
+});
+
+document.addEventListener('keyup',(e)=>{
+  const def = getDefByCode(e.code);
+  if(def){
+    const el = document.querySelector(`.key[data-code="${def.code}"]`);
+    releaseKey(def, el);
+  }
+  if(e.key==='Shift'){ state.shift=false; setPills(); refreshAllFaces(); }
+  if(!e.shiftKey && !e.altKey) langSwitchedHold=false; // όταν απελευθερωθούν και τα δύο, επιτρέπεται νέο toggle
+});
+
+/* ============ ΚΟΥΜΠΙΑ ΕΛΕΓΧΟΥ ============ */
+document.getElementById('toggleLangBtn').addEventListener('click', toggleLanguage);
+document.getElementById('clearBtn').addEventListener('click', ()=>{ output.textContent=''; writeExplain('Καθαρισμός κειμένου.'); });
+
+</script>
+</body>
+</html>
